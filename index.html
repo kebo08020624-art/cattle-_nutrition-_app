@@ -155,8 +155,22 @@
     </select>
     <div id="milk-input-area" style="display:none;margin-top:10px;">
       <label>実際の乳量 (kg/日)</label>
-      <input type="number" id="milk-amount" value="6" min="0" max="20" step="0.5" oninput="onStageChange()">
-      <div class="note" style="margin-top:4px;">乳量に合わせて要求量を自動計算します</div>
+      <div style="display:flex;gap:6px;margin:6px 0 8px;">
+        <button type="button" id="milk-preset-shosan" onclick="setMilkPreset('shosan')"
+          style="flex:1;padding:8px 4px;border:1px solid var(--primary);border-radius:6px;background:transparent;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;">
+          初産<br><span style="font-size:10px;font-weight:400;">(約3.5kg)</span>
+        </button>
+        <button type="button" id="milk-preset-keisan" onclick="setMilkPreset('keisan')"
+          style="flex:1;padding:8px 4px;border:1px solid var(--primary);border-radius:6px;background:var(--primary);color:#fff;font-size:11px;font-weight:700;cursor:pointer;">
+          経産<br><span style="font-size:10px;font-weight:400;">(標準)</span>
+        </button>
+        <button type="button" id="milk-preset-custom" onclick="setMilkPreset('custom')"
+          style="flex:1;padding:8px 4px;border:1px solid var(--primary);border-radius:6px;background:transparent;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;">
+          カスタム<br><span style="font-size:10px;font-weight:400;">(手動)</span>
+        </button>
+      </div>
+      <input type="number" id="milk-amount" value="6" min="0" max="20" step="0.5" oninput="setMilkPreset('custom')">
+      <div class="note" style="margin-top:4px;">乳量に合わせて要求量を自動計算します（2022年版の付加量係数: 乳1kgあたり TDN+0.36kg, CP+97g, Ca+2.5g, P+1.1g）</div>
     </div>
     <div id="stage-req-info" class="note" style="margin-top:8px;"></div>
     <div style="margin-top:10px;">
@@ -238,7 +252,7 @@
 
     <div class="glossary-item">
       <div class="glossary-term">CP <span class="glossary-en">粗タンパク質 Crude Protein</span></div>
-      <div class="glossary-desc">飼料中の窒素量×6.25で算出する「タンパク質相当量」。筋肉・骨・乳・胎子の形成、酵素・ホルモン合成に不可欠。繁殖牛では維持期で約12%DM、泌乳期・妊娠末期でさらに高い要求量が必要。<br>不足すると：発情不整・受胎率低下・産後の回復遅延。過剰だと：ルーメン内アンモニア過多→肝臓への負担増・受胎率低下。</div>
+      <div class="glossary-desc">飼料中の窒素量×6.25で算出する「タンパク質相当量」。筋肉・骨・乳・胎子の形成、酵素・ホルモン合成に不可欠。繁殖和牛では維持期で約8%DM、妊娠末期で約10%DM、泌乳期で約11%DM程度が目安（日本飼養標準・肉用牛2022年版より逆算）。<br>不足すると：発情不整・受胎率低下・産後の回復遅延。過剰だと：ルーメン内アンモニア過多→肝臓への負担増・受胎率低下。</div>
       <div class="glossary-tip">💡 目安：乾物中12%以上。ただし過剰（18%超）も繁殖障害の原因に。</div>
     </div>
 
@@ -290,14 +304,14 @@
       <div class="glossary-term">DM <span class="glossary-en">乾物 Dry Matter</span></div>
       <div class="glossary-desc">飼料から水分を除いた純粋な固形成分のこと。栄養成分はすべてDM基準（%DM）で表示されるため、実際の給与量から水分を引いて計算する必要がある。たとえば水分75%のサイレージを4kg与えると、DM摂取量は1kgになる。牛の1日のDM摂取量には限界（体重の約1.3〜1.5%）があり、エネルギーや栄養の設計の基礎となる。</div>
       <div class="glossary-formula">計算式: DM(kg) = 給与量(kg) × (1 − 水分(%) ÷ 100)</div>
-      <div class="glossary-tip">💡 繁殖和牛540kgの目安DM摂取量：維持期6.9kg、泌乳期9.9kg。水分の多い飼料（サイレージ等）は見た目より実質的な栄養量が少ないので注意。</div>
+      <div class="glossary-tip">💡 繁殖和牛540kgの目安DM摂取量（2022年版）：維持期6.9kg、妊娠末期7.9kg、泌乳期8.7kg(乳6kg)。水分の多い飼料（サイレージ等）は見た目より実質的な栄養量が少ないので注意。</div>
     </div>
 
     <div class="glossary-item">
       <div class="glossary-term">DMI <span class="glossary-en">乾物摂取量 Dry Matter Intake</span></div>
-      <div class="glossary-desc">牛が1日に実際に食べる乾物（水分を除いた固形成分）の総量。DMIには生理的な上限があり、体重の約1.3〜1.5%が現実的な最大値とされる。設計した給与量のDMがこの上限を超えている場合、実際には食べきれないため栄養計算が成り立たなくなる。分娩前の牛はDMIが低下しやすく（体重比1.3%程度）、分娩後はエネルギー要求量が摂取量を上回る「エネルギー負バランス（NEB）」が生じやすい。</div>
-      <div class="glossary-formula">計算式: DMI(kg) = Σ（各飼料の給与量 × 乾物率）　　上限目安: 体重(kg) × 1.5%</div>
-      <div class="glossary-tip">💡 このアプリでは体重の1.5%を超えるDMIを検出すると⚠️警告を表示します。540kgの牛なら上限は約8.1kg DM/日。</div>
+      <div class="glossary-desc">牛が1日に実際に食べる乾物（水分を除いた固形成分）の総量。DMIには生理的な上限があり、繁殖和牛では維持期・妊娠末期で体重の約1.5%、泌乳期で約2.0%が現実的な最大値とされる。設計した給与量のDMがこの上限を超えている場合、実際には食べきれないため栄養計算が成り立たなくなる。分娩前の牛はDMIが低下しやすく、分娩後はエネルギー要求量が摂取量を上回る「エネルギー負バランス（NEB）」が生じやすい。</div>
+      <div class="glossary-formula">計算式: DMI(kg) = Σ（各飼料の給与量 × 乾物率）　　上限目安: 維持・妊娠末期 体重×1.5% / 泌乳期 体重×2.0%</div>
+      <div class="glossary-tip">💡 このアプリではステージ別のDMI上限を超えると⚠️警告を表示します。540kgの牛なら維持期で約8.1kg、泌乳期で約10.8kg DM/日まで。</div>
     </div>
 
     <div class="glossary-item">
@@ -339,7 +353,7 @@
       <div class="glossary-term">NR <span class="glossary-en">栄養率 Nutritive Ratio</span></div>
       <div class="glossary-desc">飼料中の炭水化物（非タンパク性成分）とタンパク質のバランスを示す指標。NRが低い（＝タンパク質が相対的に多い）と筋肉形成・産乳に有利。NRが高い（＝炭水化物が相対的に多い）と肥育・エネルギー蓄積に向く。繁殖牛では各ステージに応じた目安値がある。</div>
       <div class="glossary-formula">計算式: NR = (TDN − CP) ÷ CP　　※TDN・CPともにg換算で計算</div>
-      <div class="glossary-tip">💡 目安：維持期5.0、分娩前4.7、泌乳期4.0。NRが低いほどタンパク質リッチ、高いほど炭水化物リッチ。</div>
+      <div class="glossary-tip">💡 目安：維持期5.0、妊娠末期4.5、泌乳期4.0。NRが低いほどタンパク質リッチ、高いほど炭水化物リッチ。</div>
     </div>
 
   </div>
@@ -418,7 +432,7 @@
     <div style="margin-bottom:14px;">
       <label>体重 (kg)</label>
       <input type="number" id="bw-input" value="540" min="300" max="900" step="5">
-      <div class="note" style="margin-top:6px;">体重を変更すると要求量が代謝体重（BW^0.75）方式で自動再計算されます。</div>
+      <div class="note" style="margin-top:6px;">日本飼養標準・肉用牛（2022年版）の公式式で自動再計算されます。<br>維持要求量は代謝体重 W^0.75 に比例、妊娠末期・泌乳期の加算量は体重に依存しません（体重非依存の定数）。</div>
     </div>
     <div style="margin-bottom:6px;font-size:13px;font-weight:700;color:var(--primary);">要求量の手動上書き（任意）</div>
     <div class="note warn" style="margin-bottom:10px;">空欄のままにすると体重から自動計算されます。</div>
@@ -601,11 +615,12 @@ const DEFAULT_FEEDS = [
   {cat:"購入粗飼料",name:"ヘイキューブ普及品",cp:16.5,fat:2.9,cf:30,adf:36.9,ndf:45.6,ash:12.9,tdn:55.2,ca:1.66,p:0.25,mg:0.35,k:2.5,nfc:22.1,rdp:11.55,moisture:10.8},
 ];
 
+// デフォルト値（BW=540kg, 経産牛想定）。applyBWToRequirements()で動的に上書きされる
 const REQUIREMENTS = {
-  pre:   {cp:782,  tdn:4.44,dm:7.93,ca:30.6,p:21.8,fat_max:5,cp_pct:12,nfc_range:"18〜20",nr:4.7},
-  post0: {cp:1125.8,tdn:5.62,dm:9.93,ca:31.6,p:24.4,fat_max:5,cp_pct:12,nfc_range:"20",nr:4.0},
-  post90:{cp:931.8,tdn:4.90,dm:8.93,ca:26.6,p:22.2,fat_max:5,cp_pct:12,nfc_range:"20",nr:4.0},
-  maint: {cp:543.8,tdn:3.46,dm:6.93,ca:16.6,p:17.8,fat_max:5,cp_pct:12,nfc_range:"18〜20",nr:5.0},
+  pre:   {cp:782,  tdn:4.45,dm:7.93,ca:30.6,p:21.8,fat_max:5,cp_pct:10,nfc_range:"20〜25",nr:4.5,dmi_max_pct:1.5},
+  post0: {cp:1126, tdn:5.63,dm:8.73,ca:31.6,p:24.4,fat_max:5,cp_pct:11,nfc_range:"20〜25",nr:4.0,dmi_max_pct:2.0},
+  post90:{cp:932,  tdn:4.91,dm:8.13,ca:26.6,p:22.2,fat_max:5,cp_pct:11,nfc_range:"20〜25",nr:4.0,dmi_max_pct:2.0},
+  maint: {cp:544,  tdn:3.47,dm:6.93,ca:16.6,p:17.8,fat_max:5,cp_pct:8, nfc_range:"18〜20",nr:5.0,dmi_max_pct:1.5},
 };
 const STAGE_NAMES = {pre:"分娩60日前",post0:"分娩後0〜90日(泌乳6kg)",post90:"分娩後90日〜(泌乳4kg)",maint:"維持期"};
 
@@ -653,32 +668,64 @@ function onStageChange(){
     if(!milkInput.dataset.stage || milkInput.dataset.stage !== stage){
       milkInput.value = defaultMilk;
       milkInput.dataset.stage = stage;
+      // プリセットも「経産(標準)」に戻す
+      updateMilkPresetUI('keisan');
     }
   }
 
-  const baseReq = REQUIREMENTS[stage];
-  // 乳量による追加要求量
-  let req = Object.assign({}, baseReq);
+  const bwSet = loadBWSettings();
+  // 乳量を取得（泌乳期のみ）
+  let milk = null;
   if(isMilk){
     const defaultMilk = stage === 'post0' ? 6 : 4;
-    const milk = parseFloat(milkInput ? milkInput.value : defaultMilk) || defaultMilk;
-    const bwSet = loadBWSettings();
-    const maint = calcReqFromBW(bwSet.bw, 'maint');
-    // 維持+泌乳で再計算
-    req = {
-      cp:  parseFloat((maint.cp  + milk * 47).toFixed(1)),
-      tdn: parseFloat((maint.tdn + milk * 0.31).toFixed(2)),
-      dm:  parseFloat((maint.dm  + milk * 0.18).toFixed(2)),
-      ca:  parseFloat((maint.ca  + milk * 1.7).toFixed(1)),
-      p:   parseFloat((maint.p   + milk * 1.1).toFixed(1)),
-      fat_max: baseReq.fat_max, cp_pct: baseReq.cp_pct,
-      nfc_range: baseReq.nfc_range, nr: baseReq.nr
-    };
-    // REQUIREMENTSを一時更新
-    REQUIREMENTS[stage] = req;
+    milk = parseFloat(milkInput ? milkInput.value : defaultMilk) || defaultMilk;
   }
+
+  // 2022年版の公式式で要求量を算出（手動上書きは考慮）
+  const auto = calcReqFromBW(bwSet.bw, stage, milk);
+  const ov = (bwSet.overrides||{})[stage]||{};
+  const req = {
+    cp:   ov.cp  !=null ? ov.cp   : auto.cp,
+    tdn:  ov.tdn !=null ? ov.tdn  : auto.tdn,
+    dm:   ov.dm  !=null ? ov.dm   : auto.dm,
+    ca:   ov.ca  !=null ? ov.ca   : auto.ca,
+    p:    ov.p   !=null ? ov.p    : auto.p,
+    fat_max: auto.fat_max, cp_pct: auto.cp_pct,
+    nfc_range: auto.nfc_range, nr: auto.nr,
+    dmi_max_pct: auto.dmi_max_pct
+  };
+  // REQUIREMENTSを一時更新
+  REQUIREMENTS[stage] = req;
+
   document.getElementById('stage-req-info').innerHTML=
     `要求量: CP ${req.cp}g / TDN ${req.tdn}kg / DM ${req.dm}kg / Ca ${req.ca}g / P ${req.p}g`;
+}
+
+// 乳量プリセット: 初産(3.5)、経産(ステージ標準)、カスタム(手動)
+function setMilkPreset(preset){
+  const stage = document.getElementById('stage-select').value;
+  const milkInput = document.getElementById('milk-amount');
+  if(!milkInput) return;
+  if(preset === 'shosan'){
+    // 初産牛: 経産の約60%（J-STAGE研究で2.7kg/日の報告あり、3-4kgが実態）
+    milkInput.value = stage === 'post0' ? 3.5 : 2.5;
+  } else if(preset === 'keisan'){
+    // 経産牛: ステージ標準
+    milkInput.value = stage === 'post0' ? 6 : 4;
+  }
+  // 'custom'は値を変えず、ユーザー入力を尊重
+  updateMilkPresetUI(preset);
+  onStageChange();
+}
+
+function updateMilkPresetUI(active){
+  ['shosan','keisan','custom'].forEach(p=>{
+    const btn = document.getElementById(`milk-preset-${p}`);
+    if(btn){
+      btn.style.background = p===active ? 'var(--primary)' : 'transparent';
+      btn.style.color      = p===active ? '#fff' : 'var(--primary)';
+    }
+  });
 }
 function getCurrentFeedRows(){
   const feeds=loadFeeds(); const rows=[];
@@ -791,14 +838,15 @@ function calculate(){
   const caPOk = caPRatio>=1.5 && caPRatio<=2.5;
   const caPBadge = caPRatio===0?'<span class="badge badge-info">P=0</span>':caPOk?'<span class="badge badge-ok">✓ 適正</span>':caPRatio<1.5?'<span class="badge badge-ng">✗ Pが多い</span>':'<span class="badge badge-warn">△ Caが多い</span>';
 
-    // DMI計算
+    // DMI計算（上限はステージ別: 維持・妊娠末期1.5%, 泌乳期2.0%）
   const bwNow = loadBWSettings().bw;
   const dmiPct = bwNow > 0 ? parseFloat((totalDM / bwNow * 100).toFixed(1)) : null;
-  const dmiBadge = dmiPct !== null && dmiPct > 1.5
+  const dmiMax = req.dmi_max_pct || 1.5;
+  const dmiBadge = dmiPct !== null && dmiPct > dmiMax
     ? '<span class="badge badge-ng">⚠ 超過</span>'
     : '<span class="badge badge-ok">✓</span>';
   const dmiHtml = dmiPct !== null
-    ? `<tr><td>DMI <span style="font-size:10px;color:var(--text-sub)">(体重比)</span></td><td>${totalDM.toFixed(2)}kg (${dmiPct}%)</td><td>${dmiBadge} 上限1.5%</td></tr>`
+    ? `<tr><td>DMI <span style="font-size:10px;color:var(--text-sub)">(体重比)</span></td><td>${totalDM.toFixed(2)}kg (${dmiPct}%)</td><td>${dmiBadge} 上限${dmiMax}%</td></tr>`
     : '';
 
   // DCAD（稲わら割合）計算
@@ -1614,24 +1662,93 @@ const REQ_ITEMS = [
   {key:'p',   label:'P (g)',    unit:'g'},
 ];
 
-// 体重540kgを基準とした係数（日本飼養標準より線形近似）
-// DM: BW*0.013, TDN/DM比は固定, CP/DM比固定
-function calcReqFromBW(bw, stage) {
-  const ratio = Math.pow(bw / 540, 0.75); // 代謝体重(BW^0.75)基準
-  const base = {
-    pre:   {cp:782,  tdn:4.44, dm:7.93, ca:30.6, p:21.8, fat_max:5, cp_pct:12, nfc_range:"18〜20", nr:4.7},
-    post0: {cp:1125.8,tdn:5.62,dm:9.93, ca:31.6, p:24.4, fat_max:5, cp_pct:12, nfc_range:"20",     nr:4.0},
-    post90:{cp:931.8, tdn:4.90,dm:8.93, ca:26.6, p:22.2, fat_max:5, cp_pct:12, nfc_range:"20",     nr:4.0},
-    maint: {cp:543.8, tdn:3.46,dm:6.93, ca:16.6, p:17.8, fat_max:5, cp_pct:12, nfc_range:"18〜20", nr:5.0},
+// ===================================================================
+// 日本飼養標準・肉用牛（2022年版）7.3〜7.5 の公式式を実装
+// 構成: 維持要求量(W^0.75ベース) + 妊娠末期付加(体重非依存) + 泌乳付加(乳量依存)
+// ===================================================================
+
+// 維持要求量（7.3）: MEM=0.1119×W^0.75, DMI=MEM÷1.81, TDN=DE÷4.41=MEM÷0.82÷4.41
+function calcMaintenance(bw){
+  const W = bw;
+  const MEM = 0.1119 * Math.pow(W, 0.75);      // Mcal/日
+  const DER = MEM / 0.82;                      // DE Mcal/日
+  const TDN = DER / 4.41;                      // kg/日
+  const DMI = MEM / 1.81;                      // kg/日 (標準飼料ME含量1.81Mcal/kg想定)
+  // CP要求量: 7.2.1の式を繁殖牛に流用（MPg=0）
+  // CPR = (MCP/0.85 + MPu/0.80) / 1.15
+  const Adj = (130 * TDN * 0.64 * 0.25 * 0.5) / 6.25;
+  const FN  = 4.80 * DMI - Adj;
+  const UN  = 0.44 * Math.pow(W, 0.5);
+  const SP  = 0.2  * Math.pow(W, 0.6);
+  const MPm = (FN*6.25 + UN*6.25 + SP) / 0.67;
+  const MPR = MPm;                             // MPg=0
+  const MCP = 130 * TDN;
+  const MPd = 0.8 * 0.8 * MCP;
+  const MPu = MPR - MPd;
+  const CP  = (MCP/0.85 + MPu/0.80) / 1.15;
+  // Ca,P (7.2.3) 吸収率込み: 維持期はRP=MILK=F=0
+  const Ca  = (0.0154 * W) / 0.5;
+  const P   = (0.0280 * W) / 0.85;
+  return {dm:DMI, tdn:TDN, cp:CP, ca:Ca, p:P, me:MEM};
+}
+
+// 妊娠末期付加（表3.1.3）: 体重非依存、分娩前2ヶ月の平均値
+// 子牛生時体重35kg、妊娠期間285-290日前提で算定された確定値
+const PREGNANCY_ADD = {cp:238, tdn:0.98, dm:1.00, ca:14, p:4};
+// ※DM付加1.0kgは妊娠末期のDMI増加分の目安（実測平均）
+
+// 泌乳付加（表3.1.4）: 乳量1kgあたりの付加量
+// CPは公式式(MPl=38×MILK÷0.65)から逆算された表確定値
+const LACTATION_ADD_PER_KG = {cp:97, tdn:0.36, dm:0.30, ca:2.5, p:1.1};
+// ※DM付加0.30kg/乳1kgは泌乳期のDMI増加分の目安
+
+// ステージ別要求量算定
+function calcReqFromBW(bw, stage, milk){
+  const maint = calcMaintenance(bw);
+  let cp=maint.cp, tdn=maint.tdn, dm=maint.dm, ca=maint.ca, p=maint.p;
+
+  // ステージ別の加算
+  if(stage === 'pre'){
+    // 妊娠末期 = 維持 + 妊娠付加
+    cp  += PREGNANCY_ADD.cp;
+    tdn += PREGNANCY_ADD.tdn;
+    dm  += PREGNANCY_ADD.dm;
+    ca  += PREGNANCY_ADD.ca;
+    p   += PREGNANCY_ADD.p;
+  } else if(stage === 'post0' || stage === 'post90'){
+    // 泌乳期 = 維持 + 泌乳付加(乳量依存)
+    const m = (milk != null && !isNaN(milk)) ? milk
+              : (stage === 'post0' ? 6 : 4);
+    cp  += LACTATION_ADD_PER_KG.cp  * m;
+    tdn += LACTATION_ADD_PER_KG.tdn * m;
+    dm  += LACTATION_ADD_PER_KG.dm  * m;
+    ca  += LACTATION_ADD_PER_KG.ca  * m;
+    p   += LACTATION_ADD_PER_KG.p   * m;
+  }
+  // maintは加算なし
+
+  // ステージ別の制約値
+  // CP%DM: 維持8%, 妊娠末期10%, 泌乳期11%（飼養標準の実値から逆算）
+  // DMI上限%BW: 維持1.5%, 妊娠末期1.5%, 泌乳期2.0%
+  // NFC目安: 維持18-20%, 妊娠末期20-25%, 泌乳期20-25%
+  // NR目安: 維持5.0, 妊娠末期4.5, 泌乳期4.0
+  const constraints = {
+    pre:    {fat_max:5, cp_pct:10, nfc_range:"20〜25", nr:4.5, dmi_max_pct:1.5},
+    post0:  {fat_max:5, cp_pct:11, nfc_range:"20〜25", nr:4.0, dmi_max_pct:2.0},
+    post90: {fat_max:5, cp_pct:11, nfc_range:"20〜25", nr:4.0, dmi_max_pct:2.0},
+    maint:  {fat_max:5, cp_pct:8,  nfc_range:"18〜20", nr:5.0, dmi_max_pct:1.5},
   };
-  const b = base[stage];
+  const c = constraints[stage];
+
   return {
-    cp:  parseFloat((b.cp  * ratio).toFixed(1)),
-    tdn: parseFloat((b.tdn * ratio).toFixed(2)),
-    dm:  parseFloat((b.dm  * ratio).toFixed(2)),
-    ca:  parseFloat((b.ca  * ratio).toFixed(1)),
-    p:   parseFloat((b.p   * ratio).toFixed(1)),
-    fat_max: b.fat_max, cp_pct: b.cp_pct, nfc_range: b.nfc_range, nr: b.nr
+    cp:  parseFloat(cp.toFixed(1)),
+    tdn: parseFloat(tdn.toFixed(2)),
+    dm:  parseFloat(dm.toFixed(2)),
+    ca:  parseFloat(ca.toFixed(1)),
+    p:   parseFloat(p.toFixed(1)),
+    fat_max: c.fat_max, cp_pct: c.cp_pct,
+    nfc_range: c.nfc_range, nr: c.nr,
+    dmi_max_pct: c.dmi_max_pct
   };
 }
 
@@ -1645,7 +1762,9 @@ function saveBWSettingsToLS(settings){
 function applyBWToRequirements(){
   const s = loadBWSettings();
   STAGE_KEYS.forEach(stage=>{
-    const auto = calcReqFromBW(s.bw, stage);
+    // 泌乳期のデフォルト乳量(post0=6, post90=4)で初期計算
+    const defaultMilk = stage === 'post0' ? 6 : (stage === 'post90' ? 4 : null);
+    const auto = calcReqFromBW(s.bw, stage, defaultMilk);
     const ov = (s.overrides||{})[stage]||{};
     REQUIREMENTS[stage] = {
       cp:   ov.cp  !=null ? ov.cp   : auto.cp,
@@ -1654,7 +1773,8 @@ function applyBWToRequirements(){
       ca:   ov.ca  !=null ? ov.ca   : auto.ca,
       p:    ov.p   !=null ? ov.p    : auto.p,
       fat_max: auto.fat_max, cp_pct: auto.cp_pct,
-      nfc_range: auto.nfc_range, nr: auto.nr
+      nfc_range: auto.nfc_range, nr: auto.nr,
+      dmi_max_pct: auto.dmi_max_pct
     };
   });
   const bwBtn = document.getElementById('bw-header-btn');
@@ -1667,7 +1787,8 @@ function openBWModal(){
   // ステージ別要求量入力欄を生成
   let html = '';
   STAGE_KEYS.forEach(stage=>{
-    const auto = calcReqFromBW(s.bw, stage);
+    const defaultMilk = stage === 'post0' ? 6 : (stage === 'post90' ? 4 : null);
+    const auto = calcReqFromBW(s.bw, stage, defaultMilk);
     const ov = (s.overrides||{})[stage]||{};
     html += `<div style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:10px;">
       <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">${STAGE_LABEL[stage]}</div>
@@ -1691,7 +1812,8 @@ function openBWModal(){
 function updateBWPreview(){
   const bw = parseFloat(document.getElementById('bw-input').value)||540;
   STAGE_KEYS.forEach(stage=>{
-    const auto = calcReqFromBW(bw, stage);
+    const defaultMilk = stage === 'post0' ? 6 : (stage === 'post90' ? 4 : null);
+    const auto = calcReqFromBW(bw, stage, defaultMilk);
     REQ_ITEMS.forEach(item=>{
       const el = document.getElementById(`ov-${stage}-${item.key}`);
       if(el) el.placeholder = auto[item.key];
