@@ -145,6 +145,7 @@
   .cow-row .cow-name-col .cow-nick { font-size:14px; font-weight:600; }
   .cow-stage-badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; }
   .stage-maint { background:#e8f5e9; color:#2e7d32; }
+  .stage-maint_preg { background:#f3e5f5; color:#6a1b9a; }
   .stage-pre { background:#fff3e0; color:#e65100; }
   .stage-post0 { background:#e3f2fd; color:#0d47a1; }
   .stage-post90 { background:#e8eaf6; color:#283593; }
@@ -446,6 +447,7 @@
     <label>現在のステージ</label>
     <select id="cow-stage">
       <option value="maint">維持期（空胎）</option>
+      <option value="maint_preg">維持期（妊娠中・分娩60日超）</option>
       <option value="pre">妊娠末期（分娩60日前〜）</option>
       <option value="post0">泌乳期（分娩後0〜90日）</option>
       <option value="post90">泌乳期（分娩後90日〜）</option>
@@ -1083,8 +1085,9 @@ const REQUIREMENTS = {
   post0: {cp:1126, tdn:5.63,dm:8.73,ca:31.6,p:24.4,fat_max:5,cp_pct:11,nfc_range:"20〜25",nr:4.0,dmi_max_pct:2.0},
   post90:{cp:932,  tdn:4.91,dm:8.13,ca:26.6,p:22.2,fat_max:5,cp_pct:11,nfc_range:"20〜25",nr:4.0,dmi_max_pct:2.0},
   maint: {cp:544,  tdn:3.47,dm:6.93,ca:16.6,p:17.8,fat_max:5,cp_pct:8, nfc_range:"18〜20",nr:5.0,dmi_max_pct:1.5},
+  maint_preg: {cp:544, tdn:3.47,dm:6.93,ca:16.6,p:17.8,fat_max:5,cp_pct:8, nfc_range:"18〜20",nr:5.0,dmi_max_pct:1.5},
 };
-const STAGE_NAMES = {pre:"分娩60日前",post0:"分娩後0〜90日(泌乳6kg)",post90:"分娩後90日〜(泌乳4kg)",maint:"維持期"};
+const STAGE_NAMES = {pre:"分娩60日前",post0:"分娩後0〜90日(泌乳6kg)",post90:"分娩後90日〜(泌乳4kg)",maint:"維持期（空胎）",maint_preg:"維持期（妊娠中）"};
 
 function loadFeeds() {
   const custom = JSON.parse(lsGet('custom_feeds', '[]'));
@@ -1951,11 +1954,12 @@ function setHistView(mode){
 
 function renderHistoryFarmerGroup(allHistory, filtered, indexMap){
   const container = document.getElementById('history-list');
-  const STAGE_ORDER = ['pre','post0','post90','maint'];
+  const STAGE_ORDER = ['pre','post0','post90','maint_preg','maint'];
   const STAGE_COLOR = {
     pre:   {bg:'#fce4ec', color:'#880e4f', icon:'🤰'},
     post0: {bg:'#e3f2fd', color:'#0d47a1', icon:'🍼'},
     post90:{bg:'#e8eaf6', color:'#1a237e', icon:'🥛'},
+    maint_preg:{bg:'#f3e5f5', color:'#6a1b9a', icon:'🫃'},
     maint: {bg:'#e8f5e9', color:'#1b5e20', icon:'🌿'}
   };
   function sc(p){return p>=90&&p<=120?'#e8f5e9':p>=75?'#fff3e0':'#ffebee';}
@@ -2131,12 +2135,13 @@ function renderHistoryGraph(){
   const area = document.getElementById('hist-graph-area');
   if(allHistory.length===0){area.innerHTML='<div class="note">履歴がありません</div>';return;}
 
-  const STAGE_ORDER=['pre','post0','post90','maint'];
+  const STAGE_ORDER=['pre','post0','post90','maint_preg','maint'];
   const STAGE_META={
     pre:  {name:'分娩前',    color:'#e91e63',bg:'#fce4ec',icon:'🤰'},
     post0:{name:'泌乳(前期)',color:'#1565c0',bg:'#e3f2fd',icon:'🍼'},
     post90:{name:'泌乳(後期)',color:'#512da8',bg:'#ede7f6',icon:'🥛'},
-    maint:{name:'維持期',    color:'#2e7d32',bg:'#e8f5e9',icon:'🌿'}
+    maint_preg:{name:'妊娠中',color:'#6a1b9a',bg:'#f3e5f5',icon:'🫃'},
+    maint:{name:'維持期(空胎)',color:'#2e7d32',bg:'#e8f5e9',icon:'🌿'}
   };
 
   // 表示項目定義
@@ -2668,8 +2673,9 @@ applyBWToRequirements();onStageChange();addFeedRow();
 })();
 
 
-function showConfirm(msg, onOk){
+function showConfirm(msg, onOk, okLabel){
   document.getElementById('confirm-modal-msg').textContent = msg;
+  document.getElementById('confirm-modal-ok').textContent = okLabel || '削除する';
   document.getElementById('confirm-modal-ok').onclick = ()=>{ closeConfirmModal(); onOk(); };
   document.getElementById('confirm-modal').classList.add('open');
 }
@@ -3842,7 +3848,7 @@ function importFeedCSV(event){
 
 // 5. PDF出力
 function printDetail(){
-  if(confirm('印刷画面が開きます。\n「PDFに保存」でPDF保存できます。')){window.print();}
+  showConfirm('印刷画面が開きます。\n「PDFに保存」でPDF保存できます。', ()=>{ window.print(); }, '印刷する');
 }
 
 // 6. DOM読み込み後の処理
@@ -4083,12 +4089,13 @@ function generateFarmerReport(){
   }
   records = records.map(enrichH);
 
-  const STAGE_ORDER = ['pre','post0','post90','maint'];
+  const STAGE_ORDER = ['pre','post0','post90','maint_preg','maint'];
   const STAGE_META = {
     pre:   {name:'分娩60日前（分娩前期）', color:'#880e4f', bg:'#fce4ec', icon:'🤰'},
     post0: {name:'分娩後0〜90日（泌乳前期）', color:'#0d47a1', bg:'#e3f2fd', icon:'🍼'},
     post90:{name:'分娩後90日〜（泌乳後期）', color:'#4527a0', bg:'#ede7f6', icon:'🥛'},
-    maint: {name:'維持期（離乳後）', color:'#1b5e20', bg:'#e8f5e9', icon:'🌿'}
+    maint_preg:{name:'維持期（妊娠中）', color:'#6a1b9a', bg:'#f3e5f5', icon:'🫃'},
+    maint: {name:'維持期（空胎）', color:'#1b5e20', bg:'#e8f5e9', icon:'🌿'}
   };
 
   // 充足率の色
@@ -4195,7 +4202,9 @@ function generateFarmerReport(){
 
     // 現状レコードとシミュレーター案レコードを分離（ここで定義）
     const calcRecords = stageRecords.filter(h=>!h.simResult);
-    const simRecords  = stageRecords.filter(h=>h.simResult);
+    const simRecords  = stageRecords.filter(h=>h.simResult)
+      .sort((a,b)=>(b.date||'').localeCompare(a.date||''));  // 日付降順（最新が先頭）
+    const latestSimArr = simRecords.slice(0,1);  // 最新1件のみ
 
     // ミニグラフ（CP/TDN/DM充足率の推移）
     const cpVals  = calcRecords.map(h=>h.pctCP  != null ? parseFloat(h.pctCP)  : null);
@@ -4393,14 +4402,14 @@ function generateFarmerReport(){
           ${graphRow}
           <div style="font-size:12px;font-weight:700;color:#555;margin:12px 0 6px;">◆ 時系列データ一覧（1）栄養充足率</div>
           <div class="timeline-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-            ${makeTableHtml(COLS1, calcRecords, simRecords)}
+            ${makeTableHtml(COLS1, calcRecords, latestSimArr)}
           </div>
           <div style="font-size:12px;font-weight:700;color:#555;margin:14px 0 6px;">◆ 時系列データ一覧（2）飼料構成・品質評価</div>
           <div class="timeline-table-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-            ${makeTableHtml(COLS2, calcRecords, simRecords)}
+            ${makeTableHtml(COLS2, calcRecords, latestSimArr)}
           </div>
           <div class="no-print" style="font-size:10px;color:#aaa;margin-top:4px;">← 表は横スクロールで全項目表示できます</div>
-          ${simRecords.length?`<div style="font-size:10px;color:#1565c0;margin-top:4px;">🎛 青背景の行 = シミュレーター案</div>`:''}
+          ${simRecords.length?`<div style="font-size:10px;color:#1565c0;margin-top:4px;">🎛 青背景の行 = シミュレーター案（最新1件のみ表示）</div>`:''}
         </div>
       </div>`;
   }
@@ -4796,7 +4805,8 @@ function saveVisits(d){ lsSet('breed_visits', JSON.stringify(d)); }
 function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 const STAGE_BADGE = {
-  maint:'<span class="cow-stage-badge stage-maint">維持期</span>',
+  maint:'<span class="cow-stage-badge stage-maint">維持期（空胎）</span>',
+  maint_preg:'<span class="cow-stage-badge stage-maint_preg">妊娠中</span>',
   pre:'<span class="cow-stage-badge stage-pre">妊娠末期</span>',
   post0:'<span class="cow-stage-badge stage-post0">泌乳0-90</span>',
   post90:'<span class="cow-stage-badge stage-post90">泌乳90+</span>'
@@ -5093,15 +5103,16 @@ function openCowDetail(cowId){
 }
 
 function deleteCow(cowId){
-  if(!confirm('この個体を削除しますか？')) return;
-  let cows = loadCows();
-  const cow = cows.find(c=>c.id===cowId);
-  cows = cows.filter(c=>c.id!==cowId);
-  saveCows(cows);
-  let events = loadEvents().filter(e=>e.cowId!==cowId);
-  saveEvents(events);
-  if(cow) openFarmDetail(cow.farmId);
-  showToast('削除しました');
+  showConfirm('この個体を削除しますか？', ()=>{
+    let cows = loadCows();
+    const cow = cows.find(c=>c.id===cowId);
+    cows = cows.filter(c=>c.id!==cowId);
+    saveCows(cows);
+    let events = loadEvents().filter(e=>e.cowId!==cowId);
+    saveEvents(events);
+    if(cow) openFarmDetail(cow.farmId);
+    showToast('削除しました');
+  });
 }
 
 // --- 繁殖イベント ---
@@ -5152,8 +5163,9 @@ function saveEvent(){
     }
     if(ev.type==='ai') cow.lastAI = ev.date;
     if(ev.type==='bcs') cow.bcs = ev.bcsVal;
-    if(ev.type==='pd_pos') cow.stage = 'pre';
-    if(ev.type==='dry') cow.stage = 'pre';
+    if(ev.type==='pd_pos') cow.stage = 'maint_preg';  // 妊鑑＋→維持期（妊娠中）。分娩60日前になったら手動でpreへ変更
+    if(ev.type==='pd_neg') cow.stage = 'maint';        // 妊鑑－→維持期（空胎）に戻す
+    if(ev.type==='dry') cow.stage = 'pre';             // 乾乳開始＝分娩60日前ステージ
     saveCows(cows);
   }
   closeEventModal();
@@ -5161,10 +5173,11 @@ function saveEvent(){
   showToast('✅ イベントを記録しました');
 }
 function deleteEvent(evId, cowId){
-  if(!confirm('このイベントを削除しますか？')) return;
-  let events = loadEvents().filter(e=>e.id!==evId);
-  saveEvents(events);
-  openCowDetail(cowId);
+  showConfirm('このイベントを削除しますか？', ()=>{
+    let events = loadEvents().filter(e=>e.id!==evId);
+    saveEvents(events);
+    openCowDetail(cowId);
+  });
 }
 
 // --- 巡回スケジュール ---
@@ -5299,7 +5312,7 @@ function renderDashboard(){
 
   // KPI
   const totalCows = cows.length;
-  const stages = {maint:0, pre:0, post0:0, post90:0};
+  const stages = {maint:0, maint_preg:0, pre:0, post0:0, post90:0};
   cows.forEach(c=> stages[c.stage]=(stages[c.stage]||0)+1 );
   const avgBCS = cows.reduce((s,c)=>s+(c.bcs||0),0)/totalCows;
 
@@ -5317,6 +5330,7 @@ function renderDashboard(){
   </div>
   <div class="kpi-grid" style="margin-top:8px;">
     <div class="kpi-card"><div class="kpi-val" style="color:var(--ok);">${stages.maint}</div><div class="kpi-label">維持期</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#6a1b9a;">${stages.maint_preg}</div><div class="kpi-label">妊娠中</div></div>
     <div class="kpi-card"><div class="kpi-val" style="color:#e65100;">${stages.pre}</div><div class="kpi-label">妊娠末期</div></div>
     <div class="kpi-card"><div class="kpi-val" style="color:#0d47a1;">${stages.post0+stages.post90}</div><div class="kpi-label">泌乳期</div></div>
   </div>
@@ -5697,12 +5711,15 @@ function toggleCowLink(){
   if(listEl.style.display !== 'none'){
     listEl.style.display='none'; noneEl.style.display='none';
     btn.textContent='選択する';
+    // フィルタUIを削除（次回開くときに再生成）
+    const fw = document.getElementById('cow-link-filter-wrap');
+    if(fw) fw.remove();
     return;
   }
   renderCowLinkList();
 }
 
-function renderCowLinkList(){
+function renderCowLinkList(filterFarmId, filterText){
   const farms = loadFarms();
   const cows = loadCows();
   const listEl = document.getElementById('cow-link-list');
@@ -5713,10 +5730,51 @@ function renderCowLinkList(){
     btn.textContent='▲ 閉じる';
     return;
   }
+
+  // フィルタUI（初回のみ挿入）
+  if(!document.getElementById('cow-link-filter-wrap')){
+    const fw = document.createElement('div');
+    fw.id = 'cow-link-filter-wrap';
+    fw.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;';
+
+    // 農家フィルタ
+    const farmSel = document.createElement('select');
+    farmSel.id = 'cow-link-farm-filter';
+    farmSel.style.cssText = 'flex:1;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;';
+    farmSel.innerHTML = '<option value="">全農家</option>' +
+      farms.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+    farmSel.onchange = ()=> renderCowLinkList(farmSel.value, document.getElementById('cow-link-text-filter')?.value||'');
+
+    // テキスト検索
+    const textIn = document.createElement('input');
+    textIn.id = 'cow-link-text-filter';
+    textIn.type = 'text';
+    textIn.placeholder = '耳番・名前で検索';
+    textIn.style.cssText = 'flex:1.2;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;';
+    textIn.oninput = ()=> renderCowLinkList(document.getElementById('cow-link-farm-filter')?.value||'', textIn.value);
+
+    fw.appendChild(farmSel);
+    fw.appendChild(textIn);
+    listEl.before(fw);
+  }
+
+  // フィルタ値を復元
+  const fid   = filterFarmId  !== undefined ? filterFarmId  : (document.getElementById('cow-link-farm-filter')?.value||'');
+  const ftxt  = filterText    !== undefined ? filterText    : (document.getElementById('cow-link-text-filter')?.value||'');
+  const ftxtL = ftxt.toLowerCase();
+
   let html = '';
+  let totalShown = 0;
   farms.forEach(f=>{
-    const fcows = cows.filter(c=>c.farmId===f.id);
+    if(fid && f.id !== fid) return;
+    const fcows = cows.filter(c=>{
+      if(c.farmId !== f.id) return false;
+      if(!ftxt) return true;
+      const nm = (c.name||c.earTag||'').toLowerCase();
+      return nm.includes(ftxtL);
+    });
     if(fcows.length===0) return;
+    totalShown += fcows.length;
     html += `<div style="font-size:11px;font-weight:700;color:var(--primary);padding:4px 0 2px;">${esc(f.name)}</div>`;
     fcows.forEach(c=>{
       const nm = c.name||c.earTag||'名称未設定';
@@ -5731,6 +5789,8 @@ function renderCowLinkList(){
       </div>`;
     });
   });
+  if(totalShown===0) html = `<div style="font-size:12px;color:var(--text-sub);padding:8px 0;">該当する個体がありません</div>`;
+
   listEl.innerHTML = html;
   listEl.style.display='block'; noneEl.style.display='none';
   btn.textContent='▲ 閉じる';
@@ -5741,35 +5801,86 @@ function linkCow(cowId){
   const cow = cows.find(c=>c.id===cowId);
   if(!cow) return;
   _linkedCowId = cowId;
+
   // 体重をBWに反映
   const bwSettings = loadBWSettings();
   bwSettings.bw = cow.weight||500;
   saveBWSettingsToLS(bwSettings);
   applyBWToRequirements();
-  // ステージをセレクトに反映
+
+  // ステージをセレクトに反映（maint_pregは計算タブにないのでmaintにフォールバック）
   const stageEl = document.getElementById('stage-select');
-  if(stageEl) stageEl.value = cow.stage||'maint';
+  const calcStage = (cow.stage==='maint_preg') ? 'maint' : (cow.stage||'maint');
+  if(stageEl) stageEl.value = calcStage;
+
   // 乳量セット
   if(cow.stage==='post0'||cow.stage==='post90'){
     const milkEl = document.getElementById('milk-amount');
-    if(milkEl){
-      milkEl.value = cow.stage==='post0' ? 6 : 4;
-    }
+    if(milkEl) milkEl.value = cow.stage==='post0' ? 6 : 4;
   }
   onStageChange();
-  // 選択表示
+
+  // 前回計算履歴を検索（この農家・同ステージの最新）
   const farm = loadFarms().find(f=>f.id===cow.farmId);
+  const farmName = farm ? farm.name : null;
+  const history = JSON.parse(lsGet('cattle_history','[]'));
+  const prev = history.find(h=>
+    !h.simResult &&
+    (farmName ? h.farmer===farmName : true) &&
+    h.feeds && h.feeds.length>0
+  );
+
+  // 選択表示（前回飼料引き継ぎボタン付き）
   const nm = cow.name||cow.earTag||'名称未設定';
+  const prevInfo = prev
+    ? `<div style="margin-top:8px;padding:8px;background:#f3f8ff;border-radius:6px;border:1px solid #bbdefb;">
+        <div style="font-size:11px;color:#1565c0;font-weight:700;margin-bottom:4px;">📋 前回の計算履歴（${prev.date.split(' ')[0]}）</div>
+        <div style="font-size:11px;color:#555;margin-bottom:6px;">${prev.feeds.map(f=>`${f.name} ${f.amount}kg`).join('　')}</div>
+        <button type="button" onclick="applyPrevFeeds('${cowId}')"
+          style="font-size:11px;background:#1565c0;color:white;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:600;">
+          ↩ この飼料構成を引き継ぐ
+        </button>
+      </div>`
+    : `<div style="margin-top:6px;font-size:11px;color:var(--text-sub);">（この農家の計算履歴がまだありません）</div>`;
+
   document.getElementById('cow-link-selected').innerHTML =
-    `<div style="background:#e8f5e9;border-radius:8px;padding:8px 12px;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
-      <div>✅ <b>${esc(nm)}</b>${farm?' ('+esc(farm.name)+')':''} — BW ${cow.weight}kg / ${STAGE_BADGE[cow.stage]||cow.stage}</div>
-      <button type="button" onclick="unlinkCow()" style="background:none;border:none;color:var(--ng);cursor:pointer;font-size:12px;">✕ 解除</button>
+    `<div style="background:#e8f5e9;border-radius:8px;padding:8px 12px;font-size:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>✅ <b>${esc(nm)}</b>${farm?' ('+esc(farm.name)+')':''} — BW ${cow.weight}kg / ${STAGE_BADGE[cow.stage]||cow.stage}</div>
+        <button type="button" onclick="unlinkCow()" style="background:none;border:none;color:var(--ng);cursor:pointer;font-size:12px;">✕ 解除</button>
+      </div>
+      ${prevInfo}
     </div>`;
   document.getElementById('cow-link-selected').style.display='block';
-  // リストを閉じる
   document.getElementById('cow-link-list').style.display='none';
   document.getElementById('cow-link-toggle-btn').textContent='変更';
   showToast(`✅ ${nm} の体重・ステージをセットしました`);
+}
+
+function applyPrevFeeds(cowId){
+  const cows = loadCows();
+  const cow = cows.find(c=>c.id===cowId);
+  if(!cow) return;
+  const farm = loadFarms().find(f=>f.id===cow.farmId);
+  const farmName = farm ? farm.name : null;
+  const history = JSON.parse(lsGet('cattle_history','[]'));
+  const prev = history.find(h=>
+    !h.simResult &&
+    (farmName ? h.farmer===farmName : true) &&
+    h.feeds && h.feeds.length>0
+  );
+  if(!prev) return;
+
+  // 現在の飼料行をクリアして前回の飼料を復元
+  const feedRows = document.getElementById('feed-rows');
+  feedRows.innerHTML = '';
+  feedRowCount = 0;
+  const allFeeds = loadFeeds();
+  prev.feeds.forEach(f=>{
+    const fd = allFeeds.find(x=>x.name===f.name);
+    if(fd) addFeedRow(f.name, f.amount);
+  });
+  showToast(`✅ 前回の飼料構成（${prev.feeds.length}種）を引き継ぎました`);
 }
 
 function unlinkCow(){
@@ -6122,7 +6233,9 @@ function fmtDate(d){
 
 function calcDaysOpen(cow){
   if(!cow.lastCalving) return null;
-  if(cow.stage==='pre') return null; // 妊娠確認済み
+  // 妊娠確認済み（妊娠中・妊娠末期・泌乳期）は空胎日数を表示しない
+  if(cow.stage==='pre' || cow.stage==='maint_preg') return null;
+  if(cow.stage==='post0' || cow.stage==='post90') return null;
   const calv = new Date(cow.lastCalving);
   const today = new Date();
   return Math.floor((today - calv)/(1000*60*60*24));
